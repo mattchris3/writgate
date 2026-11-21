@@ -15,3 +15,9 @@ coverage.*
 .idea/
 .vscode/
 .DS_Store
+
+# Python (examples/payments-api)
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/

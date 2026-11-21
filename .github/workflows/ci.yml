@@ -33,3 +33,19 @@ jobs:
       - uses: golangci/golangci-lint-action@v8
         with:
           version: v2.15.0
+
+  payments-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/payments-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+      - run: uv run python scripts/export_openapi.py --check
