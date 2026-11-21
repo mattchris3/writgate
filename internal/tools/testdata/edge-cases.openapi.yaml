@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: Edge cases
+  version: "1"
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    queryKey:
+      type: apiKey
+      in: query
+      name: api_key
+  schemas:
+    Note:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          title: Text
+        title:
+          type: string
+          nullable: true
+        score:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+paths:
+  /notes/{note_id}:
+    parameters:
+      - name: note_id
+        in: path
+        required: true
+        schema: {type: integer}
+        description: path-level, overridden below
+    get:
+      operationId: fetchNote
+      parameters:
+        - name: note_id
+          in: path
+          required: true
+          schema: {type: string}
+        - name: X-Api-Key
+          in: header
+          schema: {type: string}
+        - name: authorization
+          in: header
+          schema: {type: string}
+        - name: api_key
+          in: query
+          schema: {type: string}
+        - name: session
+          in: cookie
+          schema: {type: string}
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Note"}
+    put:
+      x-writgate-name: replace-note
+      x-writgate-destructive: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/Note"}
+      responses:
+        "200": {description: ok}
+    patch:
+      summary: Tag a note
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+              required: [note_id]
+              properties:
+                note_id: {type: string}
+      responses:
+        "200": {description: ok}
+  /notes:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: {$ref: "#/components/schemas/Note"}
+      responses:
+        "201": {description: created}
+  /upload:
+    post:
+      requestBody:
+        content:
+          multipart/form-data:
+            schema: {type: object}
+      responses:
+        "200": {description: ok}
+  /session:
+    get:
+      parameters:
+        - name: sid
+          in: cookie
+          required: true
+          schema: {type: string}
+      responses:
+        "200": {description: ok}

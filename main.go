@@ -17,6 +17,7 @@ Usage:
   writgate <command> [flags]
 
 Commands:
+  tools <spec>   List the MCP tools an OpenAPI spec turns into
   version        Print the writgate version
   help           Show this help
 
@@ -39,6 +40,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, "writgate", resolveVersion())
 		return 0
+	case "tools":
+		return runTools(args[1:], stdout, stderr)
 	case "help", "--help", "-h":
 		fmt.Fprint(stdout, usage)
 		return 0

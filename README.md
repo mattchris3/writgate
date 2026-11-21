@@ -34,6 +34,24 @@ allow: [readonly, create_refund]
 deny:  [cancel_refund]
 ```
 
+### See what a spec turns into
+
+This works today:
+
+```sh
+$ writgate tools ./openapi.json
+create_charge            POST    /charges                           destructive
+list_charges             GET     /charges                           readonly
+get_charge               GET     /charges/{charge_id}               readonly
+create_refund            POST    /charges/{charge_id}/refunds       destructive
+list_refunds             GET     /charges/{charge_id}/refunds       readonly
+cancel_refund            DELETE  /refunds/{refund_id}               destructive
+
+6 tools
+```
+
+The last column shows the policy groups each tool falls in. Add `--json` for the full MCP `tools/list` result, with input and output schemas.
+
 ## Development
 
 Requires Go 1.26 or later.
