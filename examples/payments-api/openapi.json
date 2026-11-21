@@ -1,0 +1,822 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mock Payments API",
+    "summary": "Charges and refunds in minor units, for writgate's demo.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/charges": {
+      "post": {
+        "tags": [
+          "charges"
+        ],
+        "summary": "Create a charge",
+        "description": "Charge a customer. Charges succeed at once, except for the test customers cus_test_declined and cus_test_insufficient_funds.",
+        "operationId": "create_charge",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "A unique key per action. Retrying with the same key and body returns the first response instead of acting twice.",
+              "title": "Idempotency-Key"
+            },
+            "description": "A unique key per action. Retrying with the same key and body returns the first response instead of acting twice."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChargeCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Charge"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "The charge failed (test customers only)."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "charges"
+        ],
+        "summary": "List charges",
+        "description": "List charges, newest first.",
+        "operationId": "list_charges",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this customer's charges.",
+              "title": "Customer Id"
+            },
+            "description": "Only this customer's charges."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ChargeStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only charges in this status.",
+              "title": "Status"
+            },
+            "description": "Only charges in this status."
+          },
+          {
+            "name": "idempotency_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return the object created with this Idempotency-Key.",
+              "title": "Idempotency Key"
+            },
+            "description": "Only return the object created with this Idempotency-Key."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Page size.",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Page size."
+          },
+          {
+            "name": "starting_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cursor: the id of the last object on the previous page.",
+              "title": "Starting After"
+            },
+            "description": "Cursor: the id of the last object on the previous page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargeList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/charges/{charge_id}": {
+      "get": {
+        "tags": [
+          "charges"
+        ],
+        "summary": "Get a charge",
+        "description": "Get one charge, including how much of it has been refunded.",
+        "operationId": "get_charge",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "charge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The charge's id (ch_...).",
+              "title": "Charge Id"
+            },
+            "description": "The charge's id (ch_...)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Charge"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No object with that id."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/charges/{charge_id}/refunds": {
+      "post": {
+        "tags": [
+          "refunds"
+        ],
+        "summary": "Refund a charge",
+        "description": "Refund all or part of a charge. Omit amount to refund what's left. The refund is pending for about 30 seconds, then succeeds.",
+        "operationId": "create_refund",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "charge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The charge's id (ch_...).",
+              "title": "Charge Id"
+            },
+            "description": "The charge's id (ch_...)."
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "A unique key per action. Retrying with the same key and body returns the first response instead of acting twice.",
+              "title": "Idempotency-Key"
+            },
+            "description": "A unique key per action. Retrying with the same key and body returns the first response instead of acting twice."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Refund"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No object with that id."
+          },
+          "409": {
+            "description": "The charge can't be refunded by that amount."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "refunds"
+        ],
+        "summary": "List a charge's refunds",
+        "description": "List one charge's refunds, newest first.",
+        "operationId": "list_refunds",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "charge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The charge's id (ch_...).",
+              "title": "Charge Id"
+            },
+            "description": "The charge's id (ch_...)."
+          },
+          {
+            "name": "idempotency_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return the object created with this Idempotency-Key.",
+              "title": "Idempotency Key"
+            },
+            "description": "Only return the object created with this Idempotency-Key."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Page size.",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Page size."
+          },
+          {
+            "name": "starting_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cursor: the id of the last object on the previous page.",
+              "title": "Starting After"
+            },
+            "description": "Cursor: the id of the last object on the previous page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No object with that id."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/refunds/{refund_id}": {
+      "delete": {
+        "tags": [
+          "refunds"
+        ],
+        "summary": "Cancel a pending refund",
+        "description": "Cancel a refund that is still pending. Cancelling a cancelled refund does nothing, so retries are safe.",
+        "operationId": "cancel_refund",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The refund's id (re_...).",
+              "title": "Refund Id"
+            },
+            "description": "The refund's id (re_...)."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No object with that id."
+          },
+          "409": {
+            "description": "The refund has already succeeded."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Charge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Starts with ch_."
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ChargeStatus"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason",
+            "description": "Why the charge failed, if it did."
+          },
+          "amount_refunded": {
+            "type": "integer",
+            "title": "Amount Refunded",
+            "description": "Total of refunds that are pending or succeeded, in minor units."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "title": "Idempotency Key"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "amount",
+          "currency",
+          "customer_id",
+          "description",
+          "status",
+          "failure_reason",
+          "amount_refunded",
+          "idempotency_key",
+          "created_at"
+        ],
+        "title": "Charge"
+      },
+      "ChargeCreate": {
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Amount in minor units, e.g. 1250 = \u00a312.50."
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "description": "ISO 4217 currency code, e.g. GBP.",
+            "default": "GBP"
+          },
+          "customer_id": {
+            "type": "string",
+            "pattern": "^cus_\\w+$",
+            "title": "Customer Id",
+            "description": "The customer to charge."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "amount",
+          "customer_id"
+        ],
+        "title": "ChargeCreate"
+      },
+      "ChargeList": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Charge"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "has_more"
+        ],
+        "title": "ChargeList"
+      },
+      "ChargeStatus": {
+        "type": "string",
+        "enum": [
+          "succeeded",
+          "failed"
+        ],
+        "title": "ChargeStatus"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Refund": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Starts with re_."
+          },
+          "charge_id": {
+            "type": "string",
+            "title": "Charge Id"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefundReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/RefundStatus"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "title": "Idempotency Key"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "settles_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settles At",
+            "description": "When a pending refund becomes succeeded."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "charge_id",
+          "amount",
+          "currency",
+          "reason",
+          "status",
+          "idempotency_key",
+          "created_at",
+          "settles_at"
+        ],
+        "title": "Refund"
+      },
+      "RefundCreate": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0,
+                "description": "Amount in minor units, e.g. 1250 = \u00a312.50."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "Omit to refund everything not yet refunded."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefundReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RefundCreate"
+      },
+      "RefundList": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Refund"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "has_more"
+        ],
+        "title": "RefundList"
+      },
+      "RefundReason": {
+        "type": "string",
+        "enum": [
+          "duplicate",
+          "fraudulent",
+          "requested_by_customer"
+        ],
+        "title": "RefundReason"
+      },
+      "RefundStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "succeeded",
+          "cancelled"
+        ],
+        "title": "RefundStatus"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "The API key, sent as a bearer token.",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
