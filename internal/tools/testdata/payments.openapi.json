@@ -1,0 +1,146 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "Mock Payments API", "version": "0.1.0"},
+  "paths": {
+    "/charges": {
+      "post": {
+        "tags": ["charges"],
+        "summary": "Create Charge",
+        "description": "Charge a customer's payment method. Amounts are in minor units (pence).",
+        "operationId": "create_charge_charges_post",
+        "parameters": [
+          {"name": "Idempotency-Key", "in": "header", "required": false,
+           "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Idempotency-Key"},
+           "description": "Reuse the same key to safely retry a charge."}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ChargeCreate"}}}},
+        "responses": {
+          "201": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Charge"}}}},
+          "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}
+        }
+      },
+      "get": {
+        "tags": ["charges"],
+        "summary": "List Charges",
+        "operationId": "list_charges_charges_get",
+        "parameters": [
+          {"name": "customer_id", "in": "query", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Customer Id"}},
+          {"name": "status", "in": "query", "required": false, "schema": {"anyOf": [{"$ref": "#/components/schemas/ChargeStatus"}, {"type": "null"}]}},
+          {"name": "limit", "in": "query", "required": false, "schema": {"type": "integer", "maximum": 100, "minimum": 1, "default": 20, "title": "Limit"}}
+        ],
+        "responses": {
+          "200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/Charge"}, "title": "Response List Charges Charges Get"}}}},
+          "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}
+        }
+      }
+    },
+    "/charges/{charge_id}": {
+      "get": {
+        "tags": ["charges"],
+        "summary": "Get Charge",
+        "operationId": "get_charge_charges__charge_id__get",
+        "parameters": [{"name": "charge_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Charge Id"}}],
+        "responses": {
+          "200": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Charge"}}}},
+          "404": {"description": "Charge not found"},
+          "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}
+        }
+      }
+    },
+    "/charges/{charge_id}/refunds": {
+      "post": {
+        "tags": ["refunds"],
+        "summary": "Create Refund",
+        "description": "Refund all or part of a captured charge. Omit amount for a full refund.",
+        "operationId": "create_refund_charges__charge_id__refunds_post",
+        "parameters": [
+          {"name": "charge_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Charge Id"}},
+          {"name": "Idempotency-Key", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Idempotency-Key"}}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RefundCreate"}}}},
+        "responses": {
+          "201": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Refund"}}}},
+          "409": {"description": "Refund exceeds remaining amount"},
+          "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}
+        }
+      },
+      "get": {
+        "tags": ["refunds"],
+        "summary": "List Refunds",
+        "operationId": "list_refunds_charges__charge_id__refunds_get",
+        "parameters": [{"name": "charge_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Charge Id"}}],
+        "responses": {
+          "200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/Refund"}}}}}
+        }
+      }
+    },
+    "/refunds/{refund_id}": {
+      "delete": {
+        "tags": ["refunds"],
+        "summary": "Cancel Refund",
+        "description": "Cancel a refund that is still pending.",
+        "operationId": "cancel_refund_refunds__refund_id__delete",
+        "parameters": [{"name": "refund_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Refund Id"}}],
+        "responses": {"204": {"description": "Successful Response"}}
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChargeStatus": {"type": "string", "enum": ["pending", "succeeded", "failed", "refunded"], "title": "ChargeStatus"},
+      "ChargeCreate": {
+        "type": "object", "title": "ChargeCreate",
+        "properties": {
+          "amount": {"type": "integer", "exclusiveMinimum": 0, "title": "Amount", "description": "Amount in minor units, e.g. 1250 = £12.50"},
+          "currency": {"type": "string", "pattern": "^[A-Z]{3}$", "title": "Currency", "default": "GBP"},
+          "customer_id": {"type": "string", "title": "Customer Id"},
+          "description": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Description"}
+        },
+        "required": ["amount", "customer_id"]
+      },
+      "Charge": {
+        "type": "object", "title": "Charge",
+        "properties": {
+          "id": {"type": "string", "title": "Id"},
+          "amount": {"type": "integer", "title": "Amount"},
+          "currency": {"type": "string", "title": "Currency"},
+          "customer_id": {"type": "string", "title": "Customer Id"},
+          "status": {"$ref": "#/components/schemas/ChargeStatus"},
+          "amount_refunded": {"type": "integer", "title": "Amount Refunded"},
+          "created_at": {"type": "string", "format": "date-time", "title": "Created At"}
+        },
+        "required": ["id", "amount", "currency", "customer_id", "status", "amount_refunded", "created_at"]
+      },
+      "RefundCreate": {
+        "type": "object", "title": "RefundCreate",
+        "properties": {
+          "amount": {"anyOf": [{"type": "integer", "exclusiveMinimum": 0}, {"type": "null"}], "title": "Amount"},
+          "reason": {"anyOf": [{"type": "string", "enum": ["duplicate", "fraudulent", "requested_by_customer"]}, {"type": "null"}], "title": "Reason"}
+        }
+      },
+      "Refund": {
+        "type": "object", "title": "Refund",
+        "properties": {
+          "id": {"type": "string", "title": "Id"},
+          "charge_id": {"type": "string", "title": "Charge Id"},
+          "amount": {"type": "integer", "title": "Amount"},
+          "status": {"type": "string", "enum": ["pending", "succeeded", "cancelled"], "title": "Status"}
+        },
+        "required": ["id", "charge_id", "amount", "status"]
+      },
+      "HTTPValidationError": {
+        "type": "object", "title": "HTTPValidationError",
+        "properties": {"detail": {"type": "array", "items": {"$ref": "#/components/schemas/ValidationError"}, "title": "Detail"}}
+      },
+      "ValidationError": {
+        "type": "object", "title": "ValidationError",
+        "properties": {
+          "loc": {"type": "array", "items": {"anyOf": [{"type": "string"}, {"type": "integer"}]}, "title": "Location"},
+          "msg": {"type": "string", "title": "Message"},
+          "type": {"type": "string", "title": "Error Type"}
+        },
+        "required": ["loc", "msg", "type"]
+      }
+    }
+  }
+}

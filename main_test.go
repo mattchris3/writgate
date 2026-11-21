@@ -17,6 +17,11 @@ func TestRun(t *testing.T) {
 		{name: "no args prints usage", args: nil, wantCode: 2, wantStderr: "Usage:"},
 		{name: "version", args: []string{"version"}, wantCode: 0, wantStdout: "writgate "},
 		{name: "help", args: []string{"help"}, wantCode: 0, wantStdout: "Commands:"},
+		{name: "tools lists the payments spec", args: []string{"tools", "internal/tools/testdata/payments.openapi.json"}, wantCode: 0, wantStdout: "6 tools"},
+		{name: "tools marks groups", args: []string{"tools", "internal/tools/testdata/payments.openapi.json"}, wantCode: 0, wantStdout: "readonly"},
+		{name: "tools json", args: []string{"tools", "--json", "internal/tools/testdata/payments.openapi.json"}, wantCode: 0, wantStdout: `"name": "create_refund"`},
+		{name: "tools without a spec", args: []string{"tools"}, wantCode: 2, wantStderr: "Usage: writgate tools"},
+		{name: "tools with a missing spec", args: []string{"tools", "nope.yaml"}, wantCode: 1, wantStderr: "read spec"},
 		{name: "unknown command", args: []string{"nope"}, wantCode: 2, wantStderr: `unknown command "nope"`},
 	}
 	for _, tt := range tests {
