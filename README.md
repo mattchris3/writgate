@@ -52,6 +52,20 @@ cancel_refund            DELETE  /refunds/{refund_id}               destructive
 
 The last column shows the policy groups each tool falls in. Add `--json` for the full MCP `tools/list` result, with input and output schemas.
 
+### Serve it to Claude Code
+
+This also works today, over stdio. Until the policy engine lands, writgate serves only the read-only tools, and every other tool is hidden and denied.
+
+```sh
+go install github.com/mattchris3/writgate@latest
+
+claude mcp add payments \
+  -e WRITGATE_UPSTREAM_API_KEY=sk_test_local \
+  -- writgate serve --spec ./examples/payments-api/openapi.json --upstream http://localhost:8000
+```
+
+The upstream API key is read only from `WRITGATE_UPSTREAM_API_KEY`. It is never a flag and never comes from the agent. Logs go to stderr, because stdout is the MCP channel. Add `-v` to log each tool's policy decision.
+
 ## Development
 
 Requires Go 1.26 or later.

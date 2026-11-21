@@ -22,6 +22,9 @@ func TestRun(t *testing.T) {
 		{name: "tools json", args: []string{"tools", "--json", "internal/tools/testdata/payments.openapi.json"}, wantCode: 0, wantStdout: `"name": "create_refund"`},
 		{name: "tools without a spec", args: []string{"tools"}, wantCode: 2, wantStderr: "Usage: writgate tools"},
 		{name: "tools with a missing spec", args: []string{"tools", "nope.yaml"}, wantCode: 1, wantStderr: "read spec"},
+		{name: "serve without flags", args: []string{"serve"}, wantCode: 2, wantStderr: "Usage: WRITGATE_UPSTREAM_API_KEY"},
+		{name: "serve http not yet", args: []string{"serve", "--spec", "x", "--upstream", "http://x", "--transport", "http"}, wantCode: 2, wantStderr: "not available yet"},
+		{name: "serve with a missing spec", args: []string{"serve", "--spec", "nope.json", "--upstream", "http://localhost:1"}, wantCode: 1, wantStderr: "read spec"},
 		{name: "unknown command", args: []string{"nope"}, wantCode: 2, wantStderr: `unknown command "nope"`},
 	}
 	for _, tt := range tests {

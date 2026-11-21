@@ -17,12 +17,13 @@ Usage:
   writgate <command> [flags]
 
 Commands:
+  serve          Serve an OpenAPI spec as MCP tools over stdio
   tools <spec>   List the MCP tools an OpenAPI spec turns into
   version        Print the writgate version
   help           Show this help
 
 Planned for v0.1 (see docs/SPEC.md):
-  serve          Serve an OpenAPI spec as MCP tools (stdio or HTTP)
+  serve --policy / --transport http
   audit verify   Check the audit log's hash chain and checkpoints
   audit recover  Resolve calls whose result is unknown
 `
@@ -40,6 +41,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, "writgate", resolveVersion())
 		return 0
+	case "serve":
+		return runServe(args[1:], stderr)
 	case "tools":
 		return runTools(args[1:], stdout, stderr)
 	case "help", "--help", "-h":
