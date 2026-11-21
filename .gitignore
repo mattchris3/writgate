@@ -1,0 +1,17 @@
+# Binaries
+/writgate
+/dist/
+
+# Test and coverage output
+*.out
+coverage.*
+
+# Local audit logs and policies
+*.audit.jsonl
+*.checkpoints.jsonl
+.env
+
+# Editors
+.idea/
+.vscode/
+.DS_Store
